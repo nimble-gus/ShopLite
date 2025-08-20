@@ -19,9 +19,23 @@
     <div class="card shadow-sm">
         <div class="card-body p-4">
             <h3 class="mb-3">Iniciar sesión</h3>
+            
+            <!-- Mensaje de error -->
             <c:if test="${param.err=='1'}">
-                <div class="alert alert-danger">Credenciales inválidas</div>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Credenciales inválidas
+                </div>
             </c:if>
+            
+            <!-- Mensaje de despedida -->
+            <c:if test="${param.bye=='1'}">
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    Sesión cerrada exitosamente
+                </div>
+            </c:if>
+            
             <form method="post" action="${pageContext.request.contextPath}/auth/login" class="row g-3">
                 <div class="col-12">
                     <label class="form-label">Email</label>
@@ -36,6 +50,15 @@
                     <a class="btn btn-light" href="${pageContext.request.contextPath}/">Cancelar</a>
                 </div>
             </form>
+            
+            <hr class="my-4">
+            <div class="text-center">
+                <small class="text-muted">
+                    <strong>Usuarios de prueba:</strong><br>
+                    Admin: admin@demo.com / admin123<br>
+                    Usuario: user@demo.com / user123
+                </small>
+            </div>
         </div>
     </div>
 </section>

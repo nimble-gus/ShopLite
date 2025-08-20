@@ -4,23 +4,46 @@
          xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
          version="6.0">
 
-    <!-- Filtro de autenticación (ustedes completan la validación de sesión) -->
+    <!-- Filtro de autenticación para /app/* -->
     <filter>
         <filter-name>AuthFilter</filter-name>
         <filter-class>com.darwinruiz.shoplite.filters.AuthFilter</filter-class>
     </filter>
     <filter-mapping>
         <filter-name>AuthFilter</filter-name>
-        <url-pattern>/*</url-pattern>
+        <url-pattern>/app/*</url-pattern>
     </filter-mapping>
 
-    <!-- Filtro de rol ADMIN para /admin -->
+    <!-- Filtro de rol ADMIN para /app/users/* -->
     <filter>
         <filter-name>AdminFilter</filter-name>
         <filter-class>com.darwinruiz.shoplite.filters.AdminFilter</filter-class>
     </filter>
     <filter-mapping>
         <filter-name>AdminFilter</filter-name>
-        <url-pattern>/admin</url-pattern>
+        <url-pattern>/app/users/*</url-pattern>
     </filter-mapping>
+    
+    <!-- Configuración de sesión -->
+    <session-config>
+        <session-timeout>30</session-timeout>
+    </session-config>
+    
+    <!-- Página de error 403 -->
+    <error-page>
+        <error-code>403</error-code>
+        <location>/403.jsp</location>
+    </error-page>
+    
+    <!-- Página de error 404 -->
+    <error-page>
+        <error-code>404</error-code>
+        <location>/404.jsp</location>
+    </error-page>
+    
+    <!-- Página de error 500 -->
+    <error-page>
+        <error-code>500</error-code>
+        <location>/500.jsp</location>
+    </error-page>
 </web-app>

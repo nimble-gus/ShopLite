@@ -1,7 +1,8 @@
 package com.darwinruiz.shoplite.controllers;
 
 import com.darwinruiz.shoplite.models.User;
-import com.darwinruiz.shoplite.repositories.UserRepository;
+import com.darwinruiz.shoplite.services.UserService;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,45 +13,50 @@ import java.io.IOException;
 import java.util.Optional;
 
 /**
- * Requisito: autenticar, regenerar sesión y guardar auth, userEmail, role, TTL.
+ * Servlet para manejar la autenticación de usuarios
  */
 @WebServlet("/auth/login")
 public class LoginServlet extends HttpServlet {
-    private final UserRepository users = new UserRepository();
+    private final UserService userService;
+
+    public LoginServlet() {
+        this.userService = new UserService();
+    }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String email = req.getParameter("email");
         String pass = req.getParameter("password");
+        String contextPath = req.getContextPath();
 
-        Optional<User> u = users.findByEmail(email);
-
-        // Requisito:
-        //  - Si credenciales inválidas → redirect a login.jsp?err=1
-        //  - Si válidas → invalidar sesión previa, crear nueva y setear:
-        //      auth=true, userEmail, role, maxInactiveInterval (p.ej. 30 min)
-        //  - Redirigir a /home
-        
-        if (u.isEmpty() || !u.get().getPassword().equals(pass)) {
-            resp.sendRedirect(req.getContextPath() + "/login.jsp?err=1");
+        if (email == null || pass == null || email.isEmpty() || pass.isEmpty()) {
+            resp.sendRedirect(contextPath + "/login.jsp?err=1");
             return;
         }
 
-        User user = u.get();
-        
-        // Invalidar sesión anterior si existe
-        HttpSession oldSession = req.getSession(false);
-        if (oldSession != null) {
-            oldSession.invalidate();
+        Optional<User> userOpt = userService.authenticate(email, pass);
+        if (userOpt.isPresent()) {
+            // Invalidar sesión previa por seguridad
+            HttpSession oldSession = req.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
+
+            // Crear nueva sesión
+            HttpSession newSession = req.getSession(true);
+            newSession.setAttribute("auth", true);
+            newSession.setAttribute("userEmail", userOpt.get().getEmail());
+            newSession.setAttribute("role", userOpt.get().getRole());
+            newSession.setMaxInactiveInterval(30 * 60); // 30 minutos
+
+            resp.sendRedirect(contextPath + "/home");
+        } else {
+            resp.sendRedirect(contextPath + "/login.jsp?err=1");
         }
-        
-        // Crear nueva sesión
-        HttpSession newSession = req.getSession(true);
-        newSession.setAttribute("auth", true);
-        newSession.setAttribute("userEmail", user.getEmail());
-        newSession.setAttribute("role", user.getRole());
-        newSession.setMaxInactiveInterval(30 * 60); // 30 minutos
-        
-        resp.sendRedirect(req.getContextPath() + "/home");
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        req.getRequestDispatcher("/login.jsp").forward(req, resp);
     }
 }

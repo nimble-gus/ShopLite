@@ -6,35 +6,60 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 /**
- * Requisito: bloquear todo lo no público si no existe una sesión con auth=true.
+ * Filtro de autenticación para proteger rutas /app/*
  */
 public class AuthFilter implements Filter {
+    private static final List<String> PUBLIC_URIS = Arrays.asList(
+            "/index.jsp",
+            "/login.jsp",
+            "/auth/login",
+            "/auth/logout",
+            "/",
+            "/403.jsp",
+            "/404.jsp",
+            "/500.jsp"
+    );
+
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
-        HttpServletRequest r = (HttpServletRequest) req;
-        HttpServletResponse p = (HttpServletResponse) res;
+        HttpServletRequest request = (HttpServletRequest) req;
+        HttpServletResponse response = (HttpServletResponse) res;
 
-        String uri = r.getRequestURI();
-        boolean esPublica =
-                uri.endsWith("/index.jsp") || uri.endsWith("/login.jsp") ||
-                        uri.contains("/auth/login") || uri.endsWith("/");
+        String contextPath = request.getContextPath();
+        String uri = request.getRequestURI();
+        String relativeUri = uri.startsWith(contextPath) && contextPath.length() > 0
+                ? uri.substring(contextPath.length()) : uri;
+
+        // Verificar si es una ruta pública
+        boolean esPublica = PUBLIC_URIS.stream()
+                .anyMatch(publicUri -> relativeUri.equals(publicUri) || 
+                        relativeUri.startsWith(publicUri) ||
+                        relativeUri.endsWith(".css") ||
+                        relativeUri.endsWith(".js") ||
+                        relativeUri.endsWith(".ico") ||
+                        relativeUri.endsWith(".png") ||
+                        relativeUri.endsWith(".jpg") ||
+                        relativeUri.endsWith(".jpeg") ||
+                        relativeUri.endsWith(".gif"));
 
         if (esPublica) {
             chain.doFilter(req, res);
             return;
         }
 
-        // Requisito: si no hay sesión válida (atributo "auth" true), redirigir a login.jsp.
-        HttpSession session = r.getSession(false);
-        if (session == null || session.getAttribute("auth") == null || 
-            !(Boolean) session.getAttribute("auth")) {
-            p.sendRedirect(r.getContextPath() + "/login.jsp");
-            return;
-        }
+        // Verificar autenticación para rutas protegidas
+        HttpSession session = request.getSession(false);
+        boolean isAuthenticated = session != null && Boolean.TRUE.equals(session.getAttribute("auth"));
 
-        chain.doFilter(req, res);
+        if (isAuthenticated) {
+            chain.doFilter(req, res);
+        } else {
+            response.sendRedirect(contextPath + "/login.jsp");
+        }
     }
 }

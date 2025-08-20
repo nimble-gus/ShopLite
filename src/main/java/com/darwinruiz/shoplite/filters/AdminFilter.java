@@ -8,34 +8,33 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
- * Requisito: permitir /admin solo a usuarios con rol "ADMIN"; los demás ven 403.jsp.
+ * Filtro de autorización para rutas /app/users/* (solo ADMIN)
  */
 public class AdminFilter implements Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
-        HttpServletRequest r = (HttpServletRequest) req;
-        HttpServletResponse p = (HttpServletResponse) res;
+        HttpServletRequest request = (HttpServletRequest) req;
+        HttpServletResponse response = (HttpServletResponse) res;
 
-        // Requisito: validar sesión existente y atributo "role" con valor "ADMIN".
-        // Si no cumple, hacer forward a /403.jsp. Si cumple, continuar.
-        HttpSession session = r.getSession(false);
-        if (session == null || session.getAttribute("auth") == null || 
-            !(Boolean) session.getAttribute("auth")) {
-            p.sendRedirect(r.getContextPath() + "/login.jsp");
+        HttpSession session = request.getSession(false);
+        
+        // Verificar si el usuario está autenticado
+        boolean isAuthenticated = session != null && Boolean.TRUE.equals(session.getAttribute("auth"));
+        
+        if (!isAuthenticated) {
+            // Si no está autenticado, redirigir a login
+            response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
         }
 
+        // Verificar si tiene rol ADMIN
         String role = (String) session.getAttribute("role");
-        if (role == null || !"ADMIN".equals(role)) {
-            try {
-                r.getRequestDispatcher("/403.jsp").forward(r, p);
-            } catch (Exception e) {
-                throw new IOException(e);
-            }
-            return;
+        if ("ADMIN".equals(role)) {
+            chain.doFilter(req, res);
+        } else {
+            // Si no es ADMIN, mostrar página 403
+            request.getRequestDispatcher("/403.jsp").forward(req, res);
         }
-
-        chain.doFilter(req, res);
     }
 }
